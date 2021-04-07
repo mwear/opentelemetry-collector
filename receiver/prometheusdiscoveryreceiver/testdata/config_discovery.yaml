@@ -1,0 +1,23 @@
+receivers:
+  prometheus:
+  prometheus/discovery:
+    config:
+      scrape_configs:
+        - job_name: 'demo'
+          scrape_interval: 5s
+          static_configs:
+            - targets: [ 'otel-collector:8889' ]
+            - targets: [ 'otel-collector:8888' ]
+
+processors:
+  nop:
+
+exporters:
+  nop:
+
+service:
+  pipelines:
+    traces:
+      receivers: [prometheus]
+      processors: [nop]
+      exporters: [nop]
