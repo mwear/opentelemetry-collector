@@ -25,6 +25,7 @@ import (
 type prometheusDiscoveryProcessor struct {
 	cfg    *Config
 	logger *zap.Logger
+	//attributeCache map[string]map[string]pdata.StringMap
 }
 
 func newPrometheusDiscoveryProcessor(logger *zap.Logger, cfg *Config) (*prometheusDiscoveryProcessor, error) {
@@ -41,5 +42,24 @@ func newPrometheusDiscoveryProcessor(logger *zap.Logger, cfg *Config) (*promethe
 // discovery. Non "up" metrics with matching job and instance attributes will be enriched with the
 // discovered attributes.
 func (pdp *prometheusDiscoveryProcessor) ProcessMetrics(_ context.Context, pdm pdata.Metrics) (pdata.Metrics, error) {
+	rms := pdm.ResourceMetrics()
+	for i := 0; i < rms.Len(); i++ {
+		rm := rms.At(i)
+		ilms := rm.InstrumentationLibraryMetrics()
+		for j := 0; j < ilms.Len(); j++ {
+			ms := ilms.At(j).Metrics()
+			for k := 0; k < ms.Len(); k++ {
+				//met := ms.At(k)
+
+				/*
+					if met is an "up" metric
+					  update the attribute cache with the discovered labels
+					else if metric has a job and instance attribute and the cache has a matching entry, e.g., attributeCache[job][instance]
+					  merge attributes from cache with attributes on the metric point
+				*/
+			}
+		}
+	}
+
 	return pdm, nil
 }
