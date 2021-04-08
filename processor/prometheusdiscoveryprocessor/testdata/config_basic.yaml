@@ -1,0 +1,15 @@
+receivers:
+    nop:
+
+processors:
+    prometheusdiscovery:
+        
+exporters:
+    nop:
+
+service:
+    pipelines:
+        metrics:
+            receivers: [nop]
+            processors: [prometheusdiscovery]
+            exporters: [nop]
