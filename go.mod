@@ -38,7 +38,7 @@ require (
 	github.com/prometheus/client_golang v1.9.0
 	github.com/prometheus/common v0.15.0
 	github.com/prometheus/prometheus v1.8.2-0.20201105135750-00f16d1ac3a4
-	github.com/rs/cors v1.7.0
+	github.com/rs/cors v1.8.2
 	github.com/shirou/gopsutil v3.20.12-0.20201210134652-afe0c04c5d5a+incompatible
 	github.com/soheilhy/cmux v0.1.4
 	github.com/spf13/cast v1.3.1
