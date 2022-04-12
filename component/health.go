@@ -27,5 +27,5 @@ type HealthNotifications interface {
 	Subscribe() <-chan (HealthEvent)
 	Unsubscribe(subscription <-chan (HealthEvent))
 	Send(event HealthEvent)
-	Stop()
+	Shutdown()
 }

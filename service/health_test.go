@@ -66,7 +66,7 @@ func TestHealthNotifications_MultipleSubscribers(t *testing.T) {
 	}()
 
 	notifications.Send(expectedEvent)
-	notifications.Stop()
+	notifications.Shutdown()
 
 	// wait for events to be consumed
 	<-sub1Done
@@ -128,7 +128,7 @@ func TestHealthNotifications_Unsubscribe(t *testing.T) {
 	notifications.Send(event1)
 	notifications.Unsubscribe(sub2)
 	notifications.Send(event2)
-	notifications.Stop()
+	notifications.Shutdown()
 
 	// wait for events to be consumed
 	<-sub1Done

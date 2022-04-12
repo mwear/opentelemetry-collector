@@ -72,7 +72,7 @@ func (hn *healthNotifications) Send(event component.HealthEvent) {
 	}
 }
 
-func (hn *healthNotifications) Stop() {
+func (hn *healthNotifications) Shutdown() {
 	hn.mu.Lock()
 	defer hn.mu.Unlock()
 

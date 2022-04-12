@@ -122,7 +122,7 @@ func TestService_ReportStatus(t *testing.T) {
 	}()
 
 	srv.HealthNotifications().Send(expectedEvent)
-	srv.HealthNotifications().Stop()
+	srv.HealthNotifications().Shutdown()
 
 	<-subDone
 

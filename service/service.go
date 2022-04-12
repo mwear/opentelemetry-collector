@@ -137,7 +137,7 @@ func (srv *service) Shutdown(ctx context.Context) error {
 	}
 
 	srv.telemetry.Logger.Info("Stopping health notifications...")
-	srv.healthNotifications.Stop()
+	srv.healthNotifications.Shutdown()
 
 	return errs
 }
