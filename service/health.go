@@ -37,7 +37,7 @@ func (hn *healthNotifications) Subscribe() <-chan (component.HealthEvent) {
 	hn.mu.Lock()
 	defer hn.mu.Unlock()
 
-	sub := make(chan (component.HealthEvent), 1)
+	sub := make(chan (component.HealthEvent))
 	hn.subscriptions = append(hn.subscriptions, sub)
 	return sub
 }
@@ -65,11 +65,21 @@ func (hn *healthNotifications) Unsubscribe(subscription <-chan (component.Health
 
 func (hn *healthNotifications) Send(event component.HealthEvent) {
 	hn.mu.RLock()
-	defer hn.mu.RUnlock()
+	wg := sync.WaitGroup{}
+	wg.Add(len(hn.subscriptions))
 
 	for _, sub := range hn.subscriptions {
-		sub <- event
+		sub := sub
+		go func() {
+			sub <- event
+			wg.Done()
+		}()
 	}
+
+	go func() {
+		wg.Wait()
+		hn.mu.RUnlock()
+	}()
 }
 
 func (hn *healthNotifications) Shutdown() {
