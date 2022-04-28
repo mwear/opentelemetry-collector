@@ -15,6 +15,7 @@
 package component // import "go.opentelemetry.io/collector/component"
 
 import (
+	"go.opentelemetry.io/collector/component/status"
 	"go.opentelemetry.io/collector/config"
 )
 
@@ -28,8 +29,6 @@ type Host interface {
 	// ReportFatalError should be called by the component anytime after Component.Start() ends and
 	// before Component.Shutdown() begins.
 	ReportFatalError(err error)
-
-	HealthNotifications() HealthNotifications
 
 	// GetFactory of the specified kind. Returns the factory for a component type.
 	// This allows components to create other components. For example:
@@ -65,4 +64,8 @@ type Host interface {
 	// GetExporters can be called by the component anytime after Component.Start() begins and
 	// until Component.Shutdown() ends.
 	GetExporters() map[config.DataType]map[config.ComponentID]Exporter
+
+	ReportStatus(eventType status.EventType, componentID config.ComponentID, options ...status.StatusEventOption)
+
+	RegisterStatusListener(options ...status.ListenerOption) status.UnregisterFunc
 }

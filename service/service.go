@@ -20,8 +20,10 @@ import (
 
 	"go.opentelemetry.io/contrib/zpages"
 	"go.uber.org/multierr"
+	"go.uber.org/zap"
 
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/component/status"
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/service/internal/builder"
 	"go.opentelemetry.io/collector/service/internal/extensions"
@@ -34,7 +36,7 @@ type service struct {
 	config              *config.Config
 	telemetry           component.TelemetrySettings
 	zPagesSpanProcessor *zpages.SpanProcessor
-	healthNotifications component.HealthNotifications
+	statusNotifications *status.Notifications
 	asyncErrorChannel   chan error
 
 	builtExporters  builder.Exporters
@@ -51,7 +53,7 @@ func newService(set *svcSettings) (*service, error) {
 		telemetry:           set.Telemetry,
 		zPagesSpanProcessor: set.ZPagesSpanProcessor,
 		asyncErrorChannel:   set.AsyncErrorChannel,
-		healthNotifications: newHealthNotifications(),
+		statusNotifications: status.NewNotifications(),
 	}
 
 	var err error
@@ -81,6 +83,11 @@ func newService(set *svcSettings) (*service, error) {
 }
 
 func (srv *service) Start(ctx context.Context) error {
+	srv.telemetry.Logger.Info("Starting status notifications...")
+	if err := srv.statusNotifications.Start(); err != nil {
+		return fmt.Errorf("failed to start status notifications: %w", err)
+	}
+
 	srv.telemetry.Logger.Info("Starting extensions...")
 	if err := srv.builtExtensions.StartAll(ctx, srv); err != nil {
 		return fmt.Errorf("failed to start extensions: %w", err)
@@ -101,12 +108,18 @@ func (srv *service) Start(ctx context.Context) error {
 		return fmt.Errorf("cannot start receivers: %w", err)
 	}
 
+	srv.statusNotifications.PipelineReady()
+
 	return srv.builtExtensions.NotifyPipelineReady()
 }
 
 func (srv *service) Shutdown(ctx context.Context) error {
 	// Accumulate errors and proceed with shutting down remaining components.
 	var errs error
+
+	if err := srv.statusNotifications.PipelineNotReady(); err != nil {
+		errs = multierr.Append(errs, fmt.Errorf("failed to notify that pipeline is not ready: %w", err))
+	}
 
 	if err := srv.builtExtensions.NotifyPipelineNotReady(); err != nil {
 		errs = multierr.Append(errs, fmt.Errorf("failed to notify that pipeline is not ready: %w", err))
@@ -136,8 +149,10 @@ func (srv *service) Shutdown(ctx context.Context) error {
 		errs = multierr.Append(errs, fmt.Errorf("failed to shutdown extensions: %w", err))
 	}
 
-	srv.telemetry.Logger.Info("Stopping health notifications...")
-	srv.healthNotifications.Shutdown()
+	srv.telemetry.Logger.Info("Stopping status notifications...")
+	if err := srv.statusNotifications.Shutdown(); err != nil {
+		errs = multierr.Append(errs, fmt.Errorf("failed to stop status notifications: %w", err))
+	}
 
 	return errs
 }
@@ -171,6 +186,12 @@ func (srv *service) GetExporters() map[config.DataType]map[config.ComponentID]co
 	return srv.builtExporters.ToMapByDataType()
 }
 
-func (srv *service) HealthNotifications() component.HealthNotifications {
-	return srv.healthNotifications
+func (srv *service) RegisterStatusListener(options ...status.ListenerOption) status.UnregisterFunc {
+	return srv.statusNotifications.RegisterListener(options...)
+}
+
+func (srv *service) ReportStatus(eventType status.EventType, componentID config.ComponentID, options ...status.StatusEventOption) {
+	if err := srv.statusNotifications.ReportStatus(eventType, componentID, options...); err != nil {
+		srv.telemetry.Logger.Warn("Service failed to report status", zap.Error(err))
+	}
 }

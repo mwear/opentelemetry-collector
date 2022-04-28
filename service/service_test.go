@@ -25,6 +25,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
+	"go.opentelemetry.io/collector/component/status"
 	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/service/servicetest"
 )
@@ -96,38 +97,53 @@ func TestService_ReportStatus(t *testing.T) {
 	require.NoError(t, err)
 	srv := createExampleService(t, factories)
 
+	var readyHandlerCalled, notReadyHandlerCalled, statusEventHandlerCalled bool
+
+	var errorEvent status.StatusEvent
+
+	statusEventHandler := func(ev status.StatusEvent) error {
+		errorEvent = ev
+		statusEventHandlerCalled = true
+		return nil
+	}
+
+	readyHandler := func() error {
+		readyHandlerCalled = true
+		return nil
+	}
+
+	notReadyHandler := func() error {
+		notReadyHandlerCalled = true
+		return nil
+	}
+
+	unregister := srv.RegisterStatusListener(
+		status.WithStatusEventHandler(statusEventHandler),
+		status.WithPipelineReadyHandler(readyHandler),
+		status.WithPipelineNotReadyHandler(notReadyHandler),
+	)
+
+	assert.False(t, statusEventHandlerCalled)
+	assert.False(t, readyHandlerCalled)
+	assert.False(t, notReadyHandlerCalled)
+
 	assert.NoError(t, srv.Start(context.Background()))
+	assert.True(t, readyHandlerCalled)
+
 	t.Cleanup(func() {
 		assert.NoError(t, srv.Shutdown(context.Background()))
 	})
 
-	expectedEvent := component.HealthEvent{
-		ComponentID: config.NewComponentID("nop"),
-		Error:       errors.New("an error"),
-	}
+	expectedComponentID := config.NewComponentID("nop")
+	expectedError := errors.New("an error")
 
-	sub := srv.HealthNotifications().Subscribe()
-	events := make(chan component.HealthEvent, 1)
-	subDone := make(chan struct{})
+	srv.ReportStatus(status.EventOK, expectedComponentID, status.WithError(expectedError))
 
-	go func() {
-		for {
-			event, ok := <-sub
-			if !ok {
-				subDone <- struct{}{}
-				return
-			}
-			events <- event
-		}
-	}()
-
-	srv.HealthNotifications().Send(expectedEvent)
-	srv.HealthNotifications().Shutdown()
-
-	<-subDone
-
-	require.Equal(t, 1, len(events))
-	require.Equal(t, expectedEvent, <-events)
+	assert.True(t, statusEventHandlerCalled)
+	assert.Equal(t, expectedComponentID, errorEvent.ComponentID)
+	assert.Equal(t, expectedError, errorEvent.Error)
+	assert.NotNil(t, errorEvent.Timestamp)
+	assert.NoError(t, unregister())
 }
 
 func createExampleService(t *testing.T, factories component.Factories) *service {
