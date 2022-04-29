@@ -36,6 +36,9 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/component/componenterror"
+	"go.opentelemetry.io/collector/component/status"
+	"go.opentelemetry.io/collector/config"
 	"go.opentelemetry.io/collector/internal/testcomponents"
 	"go.opentelemetry.io/collector/internal/testutil"
 	"go.opentelemetry.io/collector/service/featuregate"
@@ -273,6 +276,44 @@ func TestCollector_ReportError(t *testing.T) {
 		return Running == col.GetState()
 	}, 2*time.Second, 200*time.Millisecond)
 	col.service.ReportFatalError(errors.New("err2"))
+
+	<-colDone
+	assert.Equal(t, Closed, col.GetState())
+}
+
+func TestCollector_ReportStatusWithFatalError(t *testing.T) {
+	// use a mock AppTelemetry struct to return an error on shutdown
+	preservedAppTelemetry := collectorTelemetry
+	collectorTelemetry = &mockColTelemetry{}
+	defer func() { collectorTelemetry = preservedAppTelemetry }()
+
+	factories, err := testcomponents.NewDefaultFactories()
+	require.NoError(t, err)
+
+	col, err := New(CollectorSettings{
+		BuildInfo:      component.NewDefaultBuildInfo(),
+		Factories:      factories,
+		ConfigProvider: MustNewDefaultConfigProvider([]string{filepath.Join("testdata", "otelcol-config.yaml")}, nil),
+	})
+	require.NoError(t, err)
+
+	colDone := make(chan struct{})
+	go func() {
+		defer close(colDone)
+		assert.EqualError(t, col.Run(context.Background()), "failed to shutdown collector telemetry: err1")
+	}()
+
+	assert.Eventually(t, func() bool {
+		return Running == col.GetState()
+	}, 2*time.Second, 200*time.Millisecond)
+
+	col.service.ReportStatus(
+		status.EventError,
+		config.NewComponentID("nop"),
+		status.WithError(
+			componenterror.NewFatal(errors.New("err2")),
+		),
+	)
 
 	<-colDone
 	assert.Equal(t, Closed, col.GetState())
