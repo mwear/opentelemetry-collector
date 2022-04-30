@@ -191,6 +191,9 @@ func (srv *service) RegisterStatusListener(options ...status.ListenerOption) sta
 	return srv.statusNotifications.RegisterListener(options...)
 }
 
+// ReportStatus is an implementation of Host.ReportStatus. Note, that reporting a status.EventError
+// with an error wrapped by componenterror.NewFatal() will cause the collector process to terminate
+// with a non-zero exit code.
 func (srv *service) ReportStatus(eventType status.EventType, componentID config.ComponentID, options ...status.StatusEventOption) {
 	event := status.NewStatusEvent(eventType, componentID, options...)
 	if err := srv.statusNotifications.ReportStatus(event); err != nil {
