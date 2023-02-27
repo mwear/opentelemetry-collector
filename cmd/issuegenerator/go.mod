@@ -7,5 +7,7 @@ require (
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/joshdk/go-junit v0.0.0-20200702055522-6efcf4050909
 	go.uber.org/zap v1.16.0
-	golang.org/x/oauth2 v0.0.0-20201109201403-9fd604954f58
+	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
+	golang.org/x/oauth2 v0.5.0
+	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 )
