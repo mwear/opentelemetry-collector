@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/extension"
 	"go.opentelemetry.io/collector/extension/extensiontest"
+	"go.opentelemetry.io/collector/service/internal/servicetelemetry"
 )
 
 func TestBuildExtensions(t *testing.T) {
@@ -81,7 +81,7 @@ func TestBuildExtensions(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := New(context.Background(), Settings{
-				Telemetry: componenttest.NewNopTelemetrySettings(),
+				Telemetry: servicetelemetry.NewNopSettings(),
 				BuildInfo: component.NewDefaultBuildInfo(),
 				Configs:   tt.extensionsConfigs,
 				Factories: tt.factories,
@@ -168,7 +168,7 @@ func TestNotifyConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			extensions, err := New(context.Background(), Settings{
-				Telemetry: componenttest.NewNopTelemetrySettings(),
+				Telemetry: servicetelemetry.NewNopSettings(),
 				BuildInfo: component.NewDefaultBuildInfo(),
 				Configs:   tt.extensionsConfigs,
 				Factories: tt.factories,
