@@ -104,6 +104,8 @@ replace go.opentelemetry.io/collector/component => ../component
 
 replace go.opentelemetry.io/collector/pdata => ../pdata
 
+replace go.opentelemetry.io/collector/extension/healthcheckextensionv2 => ../extension/healthcheckextensionv2
+
 replace go.opentelemetry.io/collector/extension/zpagesextension => ../extension/zpagesextension
 
 replace go.opentelemetry.io/collector/extension => ../extension
